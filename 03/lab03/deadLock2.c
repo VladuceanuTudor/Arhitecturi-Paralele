@@ -21,17 +21,17 @@ void* threadFunction(void *var)
 	int thread_id = *(int*)var;
 	if(thread_id==0) {
 		pthread_mutex_lock(&mutexA);
-		sleep(1);
+		//sleep(1);
 		pthread_mutex_lock(&mutexB);
 		printf("There should be two messages displayed, I am one of them\n");
 		pthread_mutex_unlock(&mutexB);
 		pthread_mutex_unlock(&mutexA);
-		pthread_barrier_wait(&bar);
+		//pthread_barrier_wait(&bar);
 
 	} else {
-		pthread_barrier_wait(&bar);
+		//pthread_barrier_wait(&bar);
 		pthread_mutex_lock(&mutexB);
-		sleep(1);
+		//sleep(1);
 		pthread_mutex_lock(&mutexA);
 		printf("There should be two messages displayed, I am one of them\n");
 		pthread_mutex_unlock(&mutexA);

@@ -58,7 +58,11 @@ int main(int argc, char *argv[])
 	P = 2; // ATTENTION, WE OVERWRITE THE NUMBER OF THREADS. WE ONLY NEED 2
 	int i;
 
-	pthread_mutex_init(&mutex, NULL); //atribut care face unlock pe mutex!!!
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_setrobust(&attr, PTHREAD_MUTEX_ROBUST); 
+	pthread_mutex_init(&mutex, &attr);
+	pthread_mutexattr_destroy(&attr);
 	pthread_t tid[P];
 	int thread_id[P];
 	for(i = 0;i < P; i++)

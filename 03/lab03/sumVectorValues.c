@@ -1,75 +1,88 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <math.h>
 
-int printLevel;
-int N;
-int P;
-long long* v;
-long long sum;
+int N;                  
+int P;                  
+int printLevel;         
+long long *v;           
+long long global_sum = 0; 
+pthread_mutex_t mutex;  
 
-void getArgs(int argc, char **argv)
-{
-	if(argc < 4) {
-		printf("Not enough paramters: ./program N printLevel P\nprintLevel: 0=no, 1=some, 2=verbouse\n");
-		exit(1);
-	}
-	N = atoi(argv[1]);
-	printLevel = atoi(argv[2]);
-	P = atoi(argv[3]);
+void getArgs(int argc, char **argv) {
+    if (argc < 4) {
+        printf("Utilizare: ./program N printLevel P\n");
+        printf("printLevel: 0 = nimic, 1 = sumă, 2 = detaliat\n");
+        exit(1);
+    }
+
+    N = atoi(argv[1]);
+    printLevel = atoi(argv[2]);
+    P = atoi(argv[3]);
 }
 
-long long * allocVector(int N) {
-	long long *v = malloc(sizeof(long long) * N);
-	if(v == NULL) {
-		printf("malloc failed!");
-		exit(1);
-	}
-	return v;
+long long *allocVector(int n) {
+    long long *v = malloc(sizeof(long long) * n);
+    if (!v) {
+        perror("Eroare la alocarea vectorului");
+        exit(1);
+    }
+    return v;
 }
 
-void init()
-{
-	v = allocVector(N);
-
-	long long i;
-	for(i = 0; i < N; i++) {
-		v[i] = i+1;
-	}
+void initVector() {
+    v = allocVector(N);
+    for (long long i = 0; i < N; i++) {
+        v[i] = i + 1;
+    }
 }
 
-void printPartial()
-{
-	printf("Sum: %lli \n", sum);
+
+void printSum() {
+    printf("Suma elementelor: %lld\n", global_sum);
 }
 
-void printAll()
-{
-	printPartial();
+
+void *threadFunction(void *arg) {
+    int thread_id = *(int *)arg;
+
+    long long start = thread_id * (N / P);
+    long long end = (thread_id == P - 1) ? N : start + (N / P);
+
+    long long local_sum = 0;
+    for (long long i = start; i < end; i++) {
+        local_sum += v[i];
+    }
+
+    pthread_mutex_lock(&mutex);
+    global_sum += local_sum;
+    pthread_mutex_unlock(&mutex);
+
+    pthread_exit(NULL);
 }
 
-void print()
-{
-	if(printLevel == 0)
-		return;
-	else if(printLevel == 1)
-		printPartial();
-	else
-		printAll();
-}
 
-int main(int argc, char *argv[])
-{
-	getArgs(argc, argv);
-	init();
+int main(int argc, char *argv[]) {
+    getArgs(argc, argv);
+    initVector();
+    pthread_mutex_init(&mutex, NULL);
 
-	long long i;
+    pthread_t threads[P];
+    int thread_ids[P];
 
-	for(i = 0; i < N; i++)
-		sum += v[i];
+    for (int i = 0; i < P; i++) {
+        thread_ids[i] = i;
+        pthread_create(&threads[i], NULL, threadFunction, &thread_ids[i]);
+    }
 
-	print();
+    for (int i = 0; i < P; i++) {
+        pthread_join(threads[i], NULL);
+    }
 
-	return 0;
+    if (printLevel > 0)
+        printSum();
+
+    pthread_mutex_destroy(&mutex);
+    free(v);
+    return 0;
 }

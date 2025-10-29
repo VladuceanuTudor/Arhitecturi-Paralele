@@ -2,22 +2,28 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <math.h>
+#include <semaphore.h>
 
 int printLevel;
 int N;
 int P;
 
+sem_t sem;
 
 void* threadFunction(void *var)
 {
 	//TODO preserve the correct order by using semaphores you will need to add a library and the correct flag when compiling
 	int thread_id = *(int*)var;
 	if(thread_id==0)
-		printf("I should be displayed last\n");
+		{sem_wait(&sem);
+        sem_wait(&sem);
+		printf("I should be displayed last\n");}
 	else if(thread_id==1)
-		printf("I should be displayed first or in the middle\n");
+		{printf("I should be displayed first or in the middle\n");
+		sem_post(&sem);}
 	else if(thread_id==2)
-		printf("I should be displayed first or in the middle\n");
+		{printf("I should be displayed first or in the middle\n");
+		sem_post(&sem);}
 }
 
 void getArgs(int argc, char **argv)
@@ -54,6 +60,7 @@ int main(int argc, char *argv[])
 
 	P = 3; // ATTENTION, WE OVERWRITE THE NUMBER OF THREADS. WE ONLY NEED 3
 	int i;
+	sem_init(&sem, 0, 0);
 
 	pthread_t tid[P];
 	int thread_id[P];

@@ -9,6 +9,7 @@ int P;
 int a;
 const int TOADD = 2;
 
+pthread_mutex_t mutex;
 
 void* threadFunction(void *var)
 {
@@ -17,7 +18,9 @@ void* threadFunction(void *var)
 	
 	//TODO MAKE OPERATIONS ON a SAFE
 	for(i = 0; i < N; i++)
-		a = a + TOADD;
+		pthread_mutex_lock(&mutex);
+        a = a + TOADD;
+        pthread_mutex_unlock(&mutex);
 }
 
 void getArgs(int argc, char **argv)
@@ -61,6 +64,7 @@ int main(int argc, char *argv[])
 	getArgs(argc, argv);
 	init();
 
+	pthread_mutex_init(&mutex, NULL);
 	P = 2; // ATTENTION, WE OVERWRITE THE NUMBER OF THREADS. WE ONLY NEED 2
 	int i;
 
