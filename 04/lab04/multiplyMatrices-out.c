@@ -17,15 +17,20 @@ void* threadFunction(void *args)
 
 	int thread_id = *(int*)args;
 
-	/*
-	for(i = 0; i < N; i++) {
+	int i,j,k;
+	int start, end;
+
+	start = thread_id*(N/P);
+	end = (thread_id == P - 1) ? N : (thread_id + 1) * (N / P);
+
+	for(i = start; i < end; i++) {
 		for(j = 0; j < N; j++) {
 			for(k = 0; k < N; k++) {
 				c[i][j] += a[i][k] * b[k][j];
 			}
 		}
 	}
-	*/
+	
 
 	return NULL;
 }

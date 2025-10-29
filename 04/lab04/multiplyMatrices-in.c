@@ -10,6 +10,8 @@ int** a;
 int** b;
 int** c;
 
+pthread_mutex_t mux;
+
 void* threadFunction(void *args)
 {
 	// TODO: Implement parallel multiply of matrices: C = A * B
@@ -17,15 +19,23 @@ void* threadFunction(void *args)
 
 	int thread_id = *(int*)args;
 
-	/*
+	int i,j,k;
+	int start, end;
+	start = thread_id*(N/P);
+	end = (thread_id == P - 1) ? N : (thread_id + 1) * (N / P);
+
 	for(i = 0; i < N; i++) {
 		for(j = 0; j < N; j++) {
-			for(k = 0; k < N; k++) {
-				c[i][j] += a[i][k] * b[k][j];
+			int c_loc = 0;
+			for(k = start; k < end; k++) {
+				c_loc += a[i][k] * b[k][j];
 			}
+			pthread_mutex_lock(&mux);
+			c[i][j] += c_loc;
+			pthread_mutex_unlock(&mux);
 		}
 	}
-	*/
+	
 
 	return NULL;
 }
@@ -108,6 +118,8 @@ int main(int argc, char *argv[])
 	int i, j, k;
 	getArgs(argc, argv);
 	init();
+
+	pthread_mutex_init(&mux, NULL);
 
 	pthread_t tid[P];
 	int thread_id[P];

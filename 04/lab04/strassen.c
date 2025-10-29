@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <math.h>
 
+int NReps;
 int printLevel;
 int N;
 int** a;
@@ -166,55 +167,96 @@ void subMatrix(int** C, int startCi, int startCj,  int** A, int startAi, int sta
 			C[startCi + i][startCj + j] = A[startAi + i][startAj + j] - B[startBi + i][startBj + j];
 }
 
+void* strassenTask(void *arg) {
+    int id = *(int*)arg;
+
+    switch(id) {
+        case 1:
+            // M1 = (A11 + A22) * (B11 + B22)
+            addMatrix(AUXM11, 0,0, a, 0,0, a, N/2, N/2);     
+            addMatrix(AUXM12, 0,0, b, 0,0, b, N/2, N/2);     
+            mulMatrix(M1, 0,0, AUXM11, 0,0, AUXM12, 0,0);
+            break;
+
+        case 2:
+            // M2 = (A21 + A22) * B11
+            addMatrix(AUXM21, 0,0, a, N/2,0, a, N/2, N/2);   
+            mulMatrix(M2, 0,0, AUXM21, 0,0, b, 0,0);
+            break;
+
+        case 3:
+            // M3 = A11 * (B12 - B22)
+            subMatrix(AUXM31, 0,0, b, 0, N/2, b, N/2, N/2); 
+            mulMatrix(M3, 0,0, a, 0,0, AUXM31, 0,0);
+            break;
+
+        case 4:
+            // M4 = A22 * (B21 - B11)
+            subMatrix(AUXM41, 0,0, b, N/2,0, b, 0,0);       
+            mulMatrix(M4, 0,0, a, N/2, N/2, AUXM41, 0,0);
+            break;
+
+        case 5:
+            // M5 = (A11 + A12) * B22
+            addMatrix(AUXM51, 0,0, a, 0,0, a, 0, N/2);      
+            mulMatrix(M5, 0,0, AUXM51, 0,0, b, N/2, N/2);
+            break;
+
+        case 6:
+            // M6 = (A21 - A11) * (B11 + B12)
+            subMatrix(AUXM61, 0,0, a, N/2,0, a, 0,0);     
+            addMatrix(AUXM62, 0,0, b, 0,0, b, 0, N/2);      
+            mulMatrix(M6, 0,0, AUXM61, 0,0, AUXM62, 0,0);
+            break;
+
+        case 7:
+            // M7 = (A12 - A22) * (B21 + B22)
+            subMatrix(AUXM71, 0,0, a, 0, N/2, a, N/2, N/2); 
+            addMatrix(AUXM72, 0,0, b, N/2,0, b, N/2, N/2); 
+            mulMatrix(M7, 0,0, AUXM71, 0,0, AUXM72, 0,0);
+            break;
+
+        default:
+            break;
+    }
+
+    return NULL;
+}
+
 int main(int argc, char *argv[])
 {
 	getArgs(argc, argv);
 	init();
 	
-	// TODO: Create a propper number of threads 
-	// (maybe using mutiple thread functions)
-	// to parallelize Strassen Matrix multiply.
-	
-	// Hint: In the C-Style comment bellow, you have 
-	// a correct serial implementation.
-/*
-	addMatrix(AUXM11, 0, 0, a, 0, 0, a, N/2, N/2);
-	addMatrix(AUXM12, 0, 0, b, 0, 0, b, N/2, N/2);
-	mulMatrix(M1, 0, 0, AUXM11, 0, 0, AUXM12, 0, 0);
+	pthread_t threads[7];
+	int id[7];
 
-	addMatrix(AUXM21, 0,0, a, N/2, 0, a, N/2, N/2);
-	mulMatrix(M2, 0, 0, AUXM21, 0, 0, b, 0, 0);
+    for (int t = 0; t < 7; ++t) {
+        id[t] = t + 1; // 1..7
+        if (pthread_create(&threads[t], NULL, strassenTask, &id[t]) != 0) {
+            perror("pthread_create");
+            exit(1);
+        }
+    }
 
-	subMatrix(AUXM31, 0, 0, b, 0, N/2, b, N/2, N/2);
-	mulMatrix(M3, 0, 0, a, 0, 0, AUXM31, 0, 0);
+	//nu folosesc bariera deoarece am dat join la threaduri aici iar step-ul final il fac din threadul principal.
 
-	subMatrix(AUXM41, 0, 0, b, N/2, 0, b, 0, 0);
-	mulMatrix(M4, 0, 0, a, N/2, N/2, AUXM41, 0, 0);
+    for (int t = 0; t < 7; ++t) {
+        pthread_join(threads[t], NULL);
+    }
 
-	addMatrix(AUXM51, 0,0, a, 0, 0, a, 0, N/2);
-	mulMatrix(M5, 0, 0, AUXM51, 0, 0, b, N/2, N/2);
+    addMatrix(c, 0, 0, M1, 0, 0, M4, 0, 0);
+    subMatrix(c, 0, 0, c, 0, 0, M5, 0, 0);
+    addMatrix(c, 0, 0, c, 0, 0, M7, 0, 0);
 
-	subMatrix(AUXM61, 0, 0, a, N/2, 0, a, 0, 0);
-	addMatrix(AUXM62, 0, 0, b, 0, 0, b, 0, N/2);
-	mulMatrix(M6, 0, 0, AUXM61, 0, 0, AUXM62, 0, 0);
+    addMatrix(c, 0, N/2, M3, 0, 0, M5, 0, 0);
 
-	subMatrix(AUXM71, 0, 0, a, 0, N/2, a, N/2, N/2);
-	addMatrix(AUXM72, 0, 0, b, N/2, 0, b, N/2, N/2);
-	mulMatrix(M7, 0, 0, AUXM71, 0, 0, AUXM72, 0, 0);
+    addMatrix(c, N/2, 0, M2, 0, 0, M4, 0, 0);
 
-	addMatrix(c, 0, 0, M1, 0, 0, M4, 0, 0);
-	subMatrix(c, 0, 0, c, 0, 0, M5, 0, 0);
-	addMatrix(c, 0, 0, c, 0, 0, M7, 0, 0);
-
-	addMatrix(c, 0, N/2, M3, 0, 0, M5, 0, 0);
-
-	addMatrix(c, N/2, 0, M2, 0, 0, M4, 0, 0);
-
-	subMatrix(c, N/2, N/2, M1, 0, 0, M2, 0, 0);
-	addMatrix(c, N/2, N/2, c, N/2, N/2, M3, 0, 0);
-	addMatrix(c, N/2, N/2, c, N/2, N/2, M6, 0, 0);
-*/
-	print();
+    subMatrix(c, N/2, N/2, M1, 0, 0, M2, 0, 0);
+    addMatrix(c, N/2, N/2, c, N/2, N/2, M3, 0, 0);
+    addMatrix(c, N/2, N/2, c, N/2, N/2, M6, 0, 0);
+	//print();
 
 	return 0;
 }
