@@ -12,7 +12,7 @@ int* vNew;
 
 pthread_barrier_t bar;
 
-void threadFunction(void* arg)
+void* threadFunction(void* arg)
 {
 	int thread_id = *(int*)arg;
 	int offset = 0;
